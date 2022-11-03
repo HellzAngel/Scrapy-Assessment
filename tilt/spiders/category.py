@@ -1,17 +1,23 @@
 import scrapy
-import json
+from .login import json,LoginSpider
 from scrapy.http import FormRequest
 from scrapy.http import Request
-from . import login
 
-class CategorySpider(scrapy.Spider):
+class CategorySpider(LoginSpider):
     name = 'category'
-    allowed_domains = ["dummyjson.com"]
+    allowed_domains = ['dummyjson.com']
 
-    def start_requests(self):
-        token = login.token
-        return [Request("http://dummyjson.com/auth/products/categories", method='GET', body=json.dumps(token), 
-                          headers={'Content-Type':'application/json'})]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        LoginSpider.start_requests(self)
 
-    def parse(self, response):
-        print(response.text)
+    def parseToken(self, response):
+        token = json.loads(response.text)['token']
+        print("Auth Token: ",token)
+        headers= {
+        'Authorization': 'Bearer', 
+        'Content-Type': 'application/json'
+        }
+        headers['Authorization'] = 'Bearer '+token
+        return [Request("http://dummyjson.com/auth/products/categories", method='GET', 
+                          headers=headers,callback=self.parseProduct,meta={'token': token})]
